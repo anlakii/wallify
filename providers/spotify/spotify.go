@@ -6,9 +6,9 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/google/uuid"
 	"github.com/anlakii/wallify/config"
 	"github.com/anlakii/wallify/providers"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
@@ -27,6 +27,7 @@ type SpotifyClient struct {
 	config      *config.Config
 	redirectURL string
 	csrfToken   string
+	server      *http.Server
 }
 
 func (sc *SpotifyClient) Authenticate() error {
@@ -49,12 +50,15 @@ func (sc *SpotifyClient) Authenticate() error {
 	if err != nil {
 		return err
 	}
+	sc.server = &http.Server{Addr: ":8080"}
 
 	http.HandleFunc("/callback", sc.callback)
 
-	go http.ListenAndServe(":8080", nil)
+	go sc.server.ListenAndServe()
 
 	token := <-tokenChan
+
+	sc.server.Shutdown(context.TODO())
 
 	sc.spotifyClient = spotify.New(auth.Client(context.TODO(), token))
 

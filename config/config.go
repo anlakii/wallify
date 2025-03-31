@@ -50,7 +50,7 @@ func Load() (Config, error) {
 		return conf, err
 	}
 
-	conf.configPath = filepath.Join(home, ".config", "spotbg", "config.yaml")
+	conf.configPath = filepath.Join(home, ".config", "wallify", "config.yaml")
 
 	data, err := os.ReadFile(conf.configPath)
 	if err != nil {
@@ -75,7 +75,7 @@ func Load() (Config, error) {
 			return conf, err
 		}
 
-		conf.SavePath = filepath.Join(home, ".spotbg.png")
+		conf.SavePath = filepath.Join(home, ".wallify.png")
 	}
 
 	if conf.CoverPath == "" {
