@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/anlakii/wallify/config"
-	wallifyos "github.com/anlakii/wallify/os"
+	wos "github.com/anlakii/wallify/os"
 	"github.com/anlakii/wallify/process"
 	"github.com/anlakii/wallify/providers"
 	"github.com/anlakii/wallify/providers/lastfm"
@@ -20,7 +20,12 @@ func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
 
 
-	conf, err := config.Load()
+	wm := wos.NewWallpaperManager()
+	if wm == nil {
+		log.Fatal().Msg("Unsupported operating system")
+	}
+
+	conf, err := config.Load(wm)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to load configuration")
 	}
@@ -47,17 +52,17 @@ func main() {
 
 	log.Info().Msgf("Starting wallpaper update loop (Interval: %dms)", conf.Interval)
 
-	performUpdate(client, &processor, &conf)
+	performUpdate(client, &processor, &conf, wm)
 
 	ticker := time.NewTicker(time.Duration(conf.Interval) * time.Millisecond)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		performUpdate(client, &processor, &conf)
+		performUpdate(client, &processor, &conf, wm)
 	}
 }
 
-func performUpdate(client providers.Provider, processor *process.ImageProcessor, conf *config.Config) {
+func performUpdate(client providers.Provider, processor *process.ImageProcessor, conf *config.Config, wm wos.WallpaperManager) {
 	log.Debug().Msg("Checking for updates...")
 	updated, err := client.Update()
 	if err != nil {
@@ -77,7 +82,7 @@ func performUpdate(client providers.Provider, processor *process.ImageProcessor,
 	}
 
 	log.Info().Msgf("Setting wallpaper to: %s", conf.SavePath)
-	if err := wallifyos.SetWallpaper(conf.SavePath); err != nil {
+	if err := wm.SetWallpaper(conf.SavePath); err != nil {
 		log.Error().Err(err).Msg("Failed to set wallpaper")
 		return
 	}

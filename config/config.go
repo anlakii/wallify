@@ -2,14 +2,13 @@ package config
 
 import (
 	"errors"
-	"os"
+	stdos "os"
 	"os/user"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
-	wallifyos "github.com/anlakii/wallify/os"
+	"github.com/anlakii/wallify/os"
 	"gopkg.in/yaml.v3"
 )
 
@@ -49,16 +48,16 @@ func (c *Config) Save() error {
 	}
 
 	configDir := filepath.Dir(c.configPath)
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(configDir, 0700); err != nil {
+	if _, err := stdos.Stat(configDir); stdos.IsNotExist(err) {
+		if err := stdos.MkdirAll(configDir, 0700); err != nil {
 			return err
 		}
 	}
 
-	return os.WriteFile(c.configPath, data, 0600)
+	return stdos.WriteFile(c.configPath, data, 0600)
 }
 
-func Load() (Config, error) {
+func Load(wm os.WallpaperManager) (Config, error) {
 	var conf Config
 
 	usr, err := user.Current()
@@ -69,9 +68,9 @@ func Load() (Config, error) {
 
 	conf.configPath = filepath.Join(home, ".config", "wallify", "config.yaml")
 
-	data, err := os.ReadFile(conf.configPath)
+	data, err := stdos.ReadFile(conf.configPath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if stdos.IsNotExist(err) {
 			conf.Provider = "spotify"
 			conf.Interval = 1000
 
@@ -79,20 +78,15 @@ func Load() (Config, error) {
 				conf.SavePath = filepath.Join(home, ".wallify.png")
 			}
 			if conf.CoverPath == "" {
-				conf.CoverPath = filepath.Join(os.TempDir(), "cover.jpg")
+				conf.CoverPath = filepath.Join(stdos.TempDir(), "cover.jpg")
 			}
 
-			resolution, err := wallifyos.Resolution()
+			resolution, err := wm.Resolution()
 			if err != nil {
 				return conf, err
 			}
-			resParts := strings.Split(resolution, "x")
-			if len(resParts) == 2 {
-				width, _ := strconv.Atoi(resParts[0])
-				height, _ := strconv.Atoi(resParts[1])
-				conf.Width = uint(width)
-				conf.Height = uint(height)
-			}
+			conf.Width = resolution.Width
+			conf.Height = resolution.Height
 
 			if err := conf.Save(); err != nil {
 				return conf, err
@@ -133,7 +127,7 @@ func Load() (Config, error) {
 	}
 
 	if conf.CoverPath == "" {
-		conf.CoverPath = filepath.Join(os.TempDir(), "cover.jpg")
+		conf.CoverPath = filepath.Join(stdos.TempDir(), "cover.jpg")
 	}
 
 	if conf.Interval == 0 {
@@ -141,17 +135,12 @@ func Load() (Config, error) {
 	}
 
 	if conf.Width == 0 || conf.Height == 0 {
-		resolution, err := wallifyos.Resolution()
+		resolution, err := wm.Resolution()
 		if err != nil {
 			// ignore error
 		} else {
-			resParts := strings.Split(resolution, "x")
-			if len(resParts) == 2 {
-				width, _ := strconv.Atoi(resParts[0])
-				height, _ := strconv.Atoi(resParts[1])
-				conf.Width = uint(width)
-				conf.Height = uint(height)
-			}
+			conf.Width = resolution.Width
+			conf.Height = resolution.Height
 		}
 	}
 
