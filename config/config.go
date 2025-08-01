@@ -5,10 +5,11 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/anlakii/wallify/os/darwin"
+	wallifyos "github.com/anlakii/wallify/os"
 	"gopkg.in/yaml.v3"
 )
 
@@ -81,9 +82,17 @@ func Load() (Config, error) {
 				conf.CoverPath = filepath.Join(os.TempDir(), "cover.jpg")
 			}
 
-			resolution := darwin.GetResolution()
-			conf.Width = resolution.Width
-			conf.Height = resolution.Height
+			resolution, err := wallifyos.Resolution()
+			if err != nil {
+				return conf, err
+			}
+			resParts := strings.Split(resolution, "x")
+			if len(resParts) == 2 {
+				width, _ := strconv.Atoi(resParts[0])
+				height, _ := strconv.Atoi(resParts[1])
+				conf.Width = uint(width)
+				conf.Height = uint(height)
+			}
 
 			if err := conf.Save(); err != nil {
 				return conf, err
@@ -132,9 +141,18 @@ func Load() (Config, error) {
 	}
 
 	if conf.Width == 0 || conf.Height == 0 {
-		resolution := darwin.GetResolution()
-		conf.Width = resolution.Width
-		conf.Height = resolution.Height
+		resolution, err := wallifyos.Resolution()
+		if err != nil {
+			// ignore error
+		} else {
+			resParts := strings.Split(resolution, "x")
+			if len(resParts) == 2 {
+				width, _ := strconv.Atoi(resParts[0])
+				height, _ := strconv.Atoi(resParts[1])
+				conf.Width = uint(width)
+				conf.Height = uint(height)
+			}
+		}
 	}
 
 	return conf, nil

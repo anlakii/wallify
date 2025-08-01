@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/anlakii/wallify/config"
-	"github.com/anlakii/wallify/os/darwin"
+	wallifyos "github.com/anlakii/wallify/os"
 	"github.com/anlakii/wallify/process"
 	"github.com/anlakii/wallify/providers"
 	"github.com/anlakii/wallify/providers/lastfm"
@@ -77,7 +77,7 @@ func performUpdate(client providers.Provider, processor *process.ImageProcessor,
 	}
 
 	log.Info().Msgf("Setting wallpaper to: %s", conf.SavePath)
-	if err := darwin.SetWallpaper(conf.SavePath); err != nil {
+	if err := wallifyos.SetWallpaper(conf.SavePath); err != nil {
 		log.Error().Err(err).Msg("Failed to set wallpaper")
 		return
 	}
