@@ -3,7 +3,9 @@ package config
 import (
 	"errors"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/anlakii/wallify/os/darwin"
@@ -19,16 +21,22 @@ type Spotify struct {
 	Expiry       time.Time `yaml:"expiry"`
 }
 
+type Lastfm struct {
+	APIKey   string `yaml:"api_key"`
+	Username string `yaml:"username"`
+}
+
 type Config struct {
+	Provider  string `yaml:"provider"`
 	SavePath  string `yaml:"save_path"`
 	CoverPath string `yaml:"cover_path"`
 	Posthook  string `yaml:"post_hook"`
 	Height    uint   `yaml:"height"`
 	Width     uint   `yaml:"width"`
 	Interval  uint   `yaml:"interval"`
-	// CacheSize uint   `yaml:"cache_size"`
 
 	Spotify Spotify `yaml:"spotify"`
+	Lastfm  Lastfm  `yaml:"lastfm"`
 
 	configPath string
 }
@@ -39,21 +47,49 @@ func (c *Config) Save() error {
 		return err
 	}
 
-	return os.WriteFile(c.configPath, data, 0700)
+	configDir := filepath.Dir(c.configPath)
+	if _, err := os.Stat(configDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(configDir, 0700); err != nil {
+			return err
+		}
+	}
+
+	return os.WriteFile(c.configPath, data, 0600)
 }
 
 func Load() (Config, error) {
 	var conf Config
 
-	home, err := os.UserHomeDir()
+	usr, err := user.Current()
 	if err != nil {
 		return conf, err
 	}
+	home := usr.HomeDir
 
 	conf.configPath = filepath.Join(home, ".config", "wallify", "config.yaml")
 
 	data, err := os.ReadFile(conf.configPath)
 	if err != nil {
+		if os.IsNotExist(err) {
+			conf.Provider = "spotify"
+			conf.Interval = 1000
+
+			if conf.SavePath == "" {
+				conf.SavePath = filepath.Join(home, ".wallify.png")
+			}
+			if conf.CoverPath == "" {
+				conf.CoverPath = filepath.Join(os.TempDir(), "cover.jpg")
+			}
+
+			resolution := darwin.GetResolution()
+			conf.Width = resolution.Width
+			conf.Height = resolution.Height
+
+			if err := conf.Save(); err != nil {
+				return conf, err
+			}
+			return conf, errors.New("configuration file created at " + conf.configPath + "; please fill in your API credentials")
+		}
 		return conf, err
 	}
 
@@ -61,20 +97,29 @@ func Load() (Config, error) {
 		return conf, err
 	}
 
-	if conf.Spotify.ClientID == "" {
-		return conf, errors.New("client_id empty")
-	}
-
-	if conf.Spotify.ClientSecret == "" {
-		return conf, errors.New("client_secret empty")
+	conf.Provider = strings.ToLower(conf.Provider)
+	switch conf.Provider {
+	case "spotify":
+		if conf.Spotify.ClientID == "" {
+			return conf, errors.New("provider is 'spotify' but spotify.client_id is empty")
+		}
+		if conf.Spotify.ClientSecret == "" {
+			return conf, errors.New("provider is 'spotify' but spotify.client_secret is empty")
+		}
+	case "lastfm":
+		if conf.Lastfm.APIKey == "" {
+			return conf, errors.New("provider is 'lastfm' but lastfm.api_key is empty")
+		}
+		if conf.Lastfm.Username == "" {
+			return conf, errors.New("provider is 'lastfm' but lastfm.username is empty")
+		}
+	case "":
+		return conf, errors.New("config error: 'provider' field cannot be empty (must be 'spotify' or 'lastfm')")
+	default:
+		return conf, errors.New("config error: unknown provider '" + conf.Provider + "' (must be 'spotify' or 'lastfm')")
 	}
 
 	if conf.SavePath == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return conf, err
-		}
-
 		conf.SavePath = filepath.Join(home, ".wallify.png")
 	}
 
@@ -93,5 +138,4 @@ func Load() (Config, error) {
 	}
 
 	return conf, nil
-
 }
