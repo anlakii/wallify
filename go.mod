@@ -10,7 +10,7 @@ require (
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/zmb3/spotify/v2 v2.4.2
 	golang.org/x/oauth2 v0.0.0-20210810183815-faf39c7919d5
-	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/sys v0.18.0
 	gopkg.in/gographics/imagick.v3 v3.3.0
 	gopkg.in/yaml.v3 v3.0.1
 )
