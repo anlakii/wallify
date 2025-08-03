@@ -19,11 +19,7 @@ func main() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
 
-
-	wm := wos.NewWallpaperManager()
-	if wm == nil {
-		log.Fatal().Msg("Unsupported operating system")
-	}
+	wm := wos.WallpaperManager{}
 
 	conf, err := config.Load(wm)
 	if err != nil {
@@ -44,7 +40,6 @@ func main() {
 	default:
 		log.Fatal().Msgf("Invalid provider '%s' specified in configuration", conf.Provider)
 	}
-
 
 	processor := process.ImageProcessor{
 		Config: &conf,
